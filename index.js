@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const jwtUtils = require("jsonwebtoken");
-
+const jwtInterceptor = require("./jwt-interceptor");
 
 const app = express();
 const port = 3000;
@@ -37,7 +37,6 @@ const utilisateurs = [
 ];
 
 app.post("/inscription", (req, res) => {
-
   //TODO : valider les données + hacher le mot de passe + si l'email est unique
 
   const nouvelUtilisateur = req.body;
@@ -48,34 +47,33 @@ app.post("/inscription", (req, res) => {
   utilisateurs.push(nouvelUtilisateur);
 
   res.status(201).json({ message: "Utilisateur ajoutée avec succès" });
-
-})
+});
 
 app.post("/connexion", (req, res) => {
-
   const utilisateur = req.body;
 
-  //note : en cas de mot de passe hasher on devrait utiliser une methode comme bcrypt pour vérifier 
+  //note : en cas de mot de passe hasher on devrait utiliser une methode comme bcrypt pour vérifier
   // la compatibilité du mot de passe en clair avec le mot de passe hashé
-  if(utilisateurs.find((u) => u.email === utilisateur.email && u.password === utilisateur.password)) {
-
+  if (
+    utilisateurs.find(
+      (u) =>
+        u.email === utilisateur.email && u.password === utilisateur.password,
+    )
+  ) {
     const jwt = jwtUtils.sign({ sub: utilisateur.email }, "azerty");
 
-    return res.json({jwt});
+    return res.json({ jwt });
   }
 
   return res.status(401).send();
- 
 });
 
-
-
-app.get("/categories", (req, res) => {
+app.get("/categories", jwtInterceptor, (req, res) => {
   res.json(categories);
 });
 
 //ajouter une nouvelle image à une catégorie
-app.post("/image", (req, res) => {
+app.post("/image", jwtInterceptor, (req, res) => {
   const { url } = req.body;
 
   if (!url) {
@@ -101,16 +99,13 @@ app.post("/image", (req, res) => {
   //   cat.images.some((img) => img === url),
   // );
 
-  for(let categorie of categories) {
+  for (let categorie of categories) {
     for (let image of categorie.images) {
-      if(image === url) {
-        return res
-          .status(409)
-          .json({ message: "L'URL existe déjà" });
+      if (image === url) {
+        return res.status(409).json({ message: "L'URL existe déjà" });
       }
     }
   }
-
 
   //a remplacer par une requete insert dans une BDD
   categories[0].images.push(url);
@@ -119,7 +114,7 @@ app.post("/image", (req, res) => {
 });
 
 //deplacement d'une image entre catégories
-app.patch("/image/:idCategorie", (req, res) => {
+app.patch("/image/:idCategorie", jwtInterceptor, (req, res) => {
   const idCategorie = parseInt(req.params.idCategorie);
 
   const { indexImage, monter } = req.body;
@@ -153,7 +148,7 @@ app.patch("/image/:idCategorie", (req, res) => {
   res.json({ message: "Image déplacée avec succès" });
 });
 
-app.delete("/image/:idCategorie", (req, res) => {
+app.delete("/image/:idCategorie", jwtInterceptor, (req, res) => {
   const idCategorie = parseInt(req.params.idCategorie);
 
   const { indexImage } = req.body;
