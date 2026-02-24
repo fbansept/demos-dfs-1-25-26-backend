@@ -8,32 +8,40 @@ const jwtInterceptor = require("./jwt-interceptor");
 const app = express();
 const port = 3000;
 
-const categories = [
-  {
-    id: 1,
-    titre: "A",
-    images: [
-      "https://blog.hellofresh.co.uk/wp-content/uploads/2021/03/HF201125_R209_W02_FR_RFR20161819-1_MB_Main_low-scaled.jpg",
-      "https://kissmychef.com/wp-content/uploads/2020/07/cornetteria.jpg",
-    ],
-  },
-  { id: 2, titre: "B2", images: [] },
-  {
-    id: 3,
-    titre: "C",
-    images: [
-      "https://img-3.journaldesfemmes.fr/BNubGw2ChgpFyw3eK2g-PMwF28Y=/1240x/smart/7231e1a7ad4a4fbb94f3498c11392d23/ccmcms-jdf/36619834.jpg",
-    ],
-  },
-  { id: 4, titre: "D", images: [] },
-];
-
 app.use(cors());
 app.use(bodyParser.json());
 
 const utilisateurs = [
-  { email: "a@a.com", password: "root", admin: true },
-  { email: "b@b.com", password: "root", admin: false },
+  {
+    email: "a@a.com",
+    password: "root",
+    admin: true,
+    categories: [
+      {
+        id: 1,
+        titre: "A",
+        images: [
+          "https://blog.hellofresh.co.uk/wp-content/uploads/2021/03/HF201125_R209_W02_FR_RFR20161819-1_MB_Main_low-scaled.jpg",
+          "https://kissmychef.com/wp-content/uploads/2020/07/cornetteria.jpg",
+        ],
+      },
+      { id: 2, titre: "B2", images: [] },
+      {
+        id: 3,
+        titre: "C",
+        images: [
+          "https://img-3.journaldesfemmes.fr/BNubGw2ChgpFyw3eK2g-PMwF28Y=/1240x/smart/7231e1a7ad4a4fbb94f3498c11392d23/ccmcms-jdf/36619834.jpg",
+        ],
+      },
+      { id: 4, titre: "D", images: [] },
+    ],
+  },
+  {
+    email: "b@b.com",
+    password: "root",
+    admin: false,
+    categories: [],
+  },
 ];
 
 app.post("/inscription", (req, res) => {
@@ -69,7 +77,9 @@ app.post("/connexion", (req, res) => {
 });
 
 app.get("/categories", jwtInterceptor, (req, res) => {
-  res.json(categories);
+  const email = req.user.sub;
+  const utilisateur = utilisateurs.find((u) => u.email === email);
+  res.json(utilisateur.categories);
 });
 
 //ajouter une nouvelle image à une catégorie
@@ -94,6 +104,10 @@ app.post("/image", jwtInterceptor, (req, res) => {
     return res.status(400).json({ message: "L'URL de l'image est mal formée" });
   }
 
+  const email = req.user.sub;
+  const utilisateur = utilisateurs.find((u) => u.email === email);
+  const categories = utilisateur.categories;
+
   //on vérifie que l'url n'est pas déjà présente dans les catégories
   // const urlDejaPresente = categories.some((cat) =>
   //   cat.images.some((img) => img === url),
@@ -117,6 +131,10 @@ app.post("/image", jwtInterceptor, (req, res) => {
 app.patch("/image/:idCategorie", jwtInterceptor, (req, res) => {
   const idCategorie = parseInt(req.params.idCategorie);
 
+  const email = req.user.sub;
+  const utilisateur = utilisateurs.find((u) => u.email === email);
+  const categories = utilisateur.categories;  
+
   const { indexImage, monter } = req.body;
 
   if (monter == null || indexImage == null) {
@@ -128,7 +146,7 @@ app.patch("/image/:idCategorie", jwtInterceptor, (req, res) => {
   );
 
   if (indexCategorieOrigine === -1) {
-    return res.status(404).json({ message: "Catégorie non trouvée" });
+    return res.status(403).json({ message: "Catégorie inaccessible" });
   }
 
   const categorie = categories[indexCategorieOrigine];
@@ -151,6 +169,10 @@ app.patch("/image/:idCategorie", jwtInterceptor, (req, res) => {
 app.delete("/image/:idCategorie", jwtInterceptor, (req, res) => {
   const idCategorie = parseInt(req.params.idCategorie);
 
+  const email = req.user.sub;
+  const utilisateur = utilisateurs.find((u) => u.email === email);
+  const categories = utilisateur.categories;
+
   const { indexImage } = req.body;
 
   if (indexImage == null) {
@@ -160,7 +182,7 @@ app.delete("/image/:idCategorie", jwtInterceptor, (req, res) => {
   const categorie = categories.find((cat) => cat.id === idCategorie);
 
   if (!categorie) {
-    return res.status(404).json({ message: "Catégorie non trouvée" });
+    return res.status(403).json({ message: "Catégorie inaccessible" });
   }
 
   //on supprime l'image de la categorie actuelle

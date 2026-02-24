@@ -12,6 +12,7 @@ const jwtInterceptor = (req, res, next) => {
 
   try {
     const payload = jwtUtils.verify(jwt, "azerty");
+    req.user = payload;
     next();
   } catch (error) {
     return res.status(401).json({ message: "Token invalide" });
